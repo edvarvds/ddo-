@@ -8,9 +8,11 @@ Uma aplicação Node.js que utiliza múltiplos workers para enviar requisições
 - Cada worker envia requisições continuamente para a URL alvo
 - Rotação aleatória de User-Agents para cada requisição
 - Painel de estatísticas acessível via navegador
-- Configurável através de variáveis de ambiente
+- Configurável através de variáveis de ambiente e arquivo .env
 
 ## Variáveis de Ambiente
+
+A aplicação utiliza o pacote `dotenv` para carregar variáveis de ambiente a partir de um arquivo `.env`. Você pode configurar as seguintes variáveis:
 
 | Variável | Descrição | Valor Padrão |
 |----------|-----------|--------------|
@@ -19,6 +21,18 @@ Uma aplicação Node.js que utiliza múltiplos workers para enviar requisições
 | `NUM_CLUSTERS` | Número de workers (processos) | Número de CPUs disponíveis |
 | `WEB_CONCURRENCY` | Alternativa para NUM_CLUSTERS (compatibilidade com Heroku) | Número de CPUs disponíveis |
 | `REQUEST_TIMEOUT` | Timeout para cada requisição (ms) | 10000 (10 segundos) |
+
+## Arquivo .env
+
+Crie um arquivo `.env` na raiz do projeto com o seguinte conteúdo:
+
+```
+# Configurações da aplicação
+PORT=8080
+TARGET_URL=https://seu-site-alvo.com/api
+NUM_CLUSTERS=4
+REQUEST_TIMEOUT=10000
+```
 
 ## Implantação no Heroku
 
@@ -68,10 +82,11 @@ Uma aplicação Node.js que utiliza múltiplos workers para enviar requisições
    npm install
    ```
 
-2. Configure as variáveis de ambiente (opcional):
+2. Crie ou edite o arquivo `.env` na raiz do projeto (opcional):
    ```
-   export TARGET_URL=https://seu-site-alvo.com/api
-   export NUM_CLUSTERS=4
+   # Exemplo de arquivo .env
+   TARGET_URL=https://seu-site-alvo.com/api
+   NUM_CLUSTERS=4
    ```
 
 3. Inicie a aplicação:
