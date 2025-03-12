@@ -1,0 +1,25 @@
+{
+  "name": "request-sender",
+  "version": "1.0.0",
+  "description": "A multi-worker request sender application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "16.x"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "cluster": "^0.7.7",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": [
+    "heroku",
+    "requests",
+    "cluster"
+  ],
+  "author": "",
+  "license": "ISC"
+}
