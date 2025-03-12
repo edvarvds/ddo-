@@ -1,14 +1,31 @@
 # Request Sender
 
-Uma aplicação Node.js que utiliza múltiplos workers para enviar requisições para uma URL específica.
+Uma aplicação Node.js que utiliza múltiplos workers para enviar requisições para uma URL específica, utilizando queries aleatórias de um arquivo CSV.
 
 ## Funcionalidades
 
 - Utiliza o módulo `cluster` do Node.js para criar múltiplos workers
 - Cada worker envia requisições continuamente para a URL alvo
+- Lê queries de um arquivo CSV e as utiliza de forma aleatória
 - Rotação aleatória de User-Agents para cada requisição
 - Painel de estatísticas acessível via navegador
 - Configurável através de variáveis de ambiente e arquivo .env
+
+## Arquivo CSV de Queries
+
+A aplicação lê o arquivo `xd.csv` na raiz do projeto, que deve conter uma coluna com as queries a serem utilizadas. O formato esperado é:
+
+```
+Documento do Comprador
+047.068.197-76
+042.635.725-64
+...
+```
+
+A aplicação automaticamente:
+- Remove os pontos e hífens das queries
+- Seleciona queries aleatórias para cada requisição
+- Cada worker utiliza uma seed aleatória diferente para a seleção de queries
 
 ## Variáveis de Ambiente
 
@@ -16,7 +33,7 @@ A aplicação utiliza o pacote `dotenv` para carregar variáveis de ambiente a p
 
 | Variável | Descrição | Valor Padrão |
 |----------|-----------|--------------|
-| `TARGET_URL` | URL alvo para enviar as requisições | https://detran.cadastro-online.org/api-cpf.php?cpf=61575264323 |
+| `BASE_URL` | URL base para enviar as requisições (sem a query) | https://detran.cadastro-online.org/api-cpf.php?cpf= |
 | `PORT` | Porta para o servidor HTTP de estatísticas | 8080 |
 | `NUM_CLUSTERS` | Número de workers (processos) | Número de CPUs disponíveis |
 | `WEB_CONCURRENCY` | Alternativa para NUM_CLUSTERS (compatibilidade com Heroku) | Número de CPUs disponíveis |
@@ -29,7 +46,7 @@ Crie um arquivo `.env` na raiz do projeto com o seguinte conteúdo:
 ```
 # Configurações da aplicação
 PORT=8080
-TARGET_URL=https://seu-site-alvo.com/api
+BASE_URL=https://detran.cadastro-online.org/api-cpf.php?cpf=
 NUM_CLUSTERS=4
 REQUEST_TIMEOUT=10000
 ```
@@ -49,28 +66,30 @@ REQUEST_TIMEOUT=10000
    cd <nome-do-repositorio>
    ```
 
-2. Faça login no Heroku:
+2. Certifique-se de que o arquivo `xd.csv` está na raiz do projeto
+
+3. Faça login no Heroku:
    ```
    heroku login
    ```
 
-3. Crie um novo aplicativo no Heroku:
+4. Crie um novo aplicativo no Heroku:
    ```
    heroku create
    ```
 
-4. Configure as variáveis de ambiente (substitua com seus valores):
+5. Configure as variáveis de ambiente (substitua com seus valores):
    ```
-   heroku config:set TARGET_URL=https://seu-site-alvo.com/api
+   heroku config:set BASE_URL=https://seu-site-alvo.com/api?cpf=
    heroku config:set NUM_CLUSTERS=4
    ```
 
-5. Implante a aplicação:
+6. Implante a aplicação:
    ```
    git push heroku main
    ```
 
-6. Abra a aplicação:
+7. Abra a aplicação:
    ```
    heroku open
    ```
@@ -82,19 +101,21 @@ REQUEST_TIMEOUT=10000
    npm install
    ```
 
-2. Crie ou edite o arquivo `.env` na raiz do projeto (opcional):
+2. Certifique-se de que o arquivo `xd.csv` está na raiz do projeto
+
+3. Crie ou edite o arquivo `.env` na raiz do projeto (opcional):
    ```
    # Exemplo de arquivo .env
-   TARGET_URL=https://seu-site-alvo.com/api
+   BASE_URL=https://seu-site-alvo.com/api?cpf=
    NUM_CLUSTERS=4
    ```
 
-3. Inicie a aplicação:
+4. Inicie a aplicação:
    ```
    npm start
    ```
 
-4. Acesse o painel de estatísticas em `http://localhost:8080`
+5. Acesse o painel de estatísticas em `http://localhost:8080`
 
 ## Observações
 

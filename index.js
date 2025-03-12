@@ -4,10 +4,12 @@ require('dotenv').config();
 const cluster = require('cluster');
 const os = require('os');
 const fetch = require('node-fetch');
+const fs = require('fs');
+const path = require('path');
 
 // Configuration from environment variables
 const PORT = process.env.PORT || 8080;
-const TARGET_URL = process.env.TARGET_URL || 'https://detran.cadastro-online.org/api-cpf.php?cpf=61575264323';
+const BASE_URL = process.env.BASE_URL || 'https://detran.cadastro-online.org/api-cpf.php?cpf=';
 const NUM_CLUSTERS = parseInt(process.env.NUM_CLUSTERS || process.env.WEB_CONCURRENCY || os.cpus().length); // Number of worker processes
 const requestTimeout = parseInt(process.env.REQUEST_TIMEOUT || '10000'); // 10 seconds timeout for each request
 
@@ -16,6 +18,39 @@ let requestCount = 0;
 let successCount = 0;
 let failureCount = 0;
 const startTime = Date.now();
+
+// Array to store queries from CSV
+let queries = [];
+
+// Function to load queries from CSV file
+function loadQueriesFromCSV() {
+  try {
+    const csvPath = path.join(__dirname, 'xd.csv');
+    const fileContent = fs.readFileSync(csvPath, 'utf8');
+    
+    // Split by lines and remove header
+    const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+    const header = lines[0];
+    
+    // Extract queries and remove dots
+    queries = lines.slice(1).map(line => line.replace(/\./g, '').replace(/-/g, '').trim());
+    
+    console.log(`Loaded ${queries.length} queries from CSV file`);
+    return queries;
+  } catch (error) {
+    console.error(`Error loading CSV file: ${error.message}`);
+    return [];
+  }
+}
+
+// Function to get a random query
+function getRandomQuery() {
+  if (queries.length === 0) {
+    return '61575264323'; // Default fallback query
+  }
+  const randomIndex = Math.floor(Math.random() * queries.length);
+  return queries[randomIndex];
+}
 
 // Function to log statistics
 function logStats() {
@@ -27,6 +62,9 @@ function logStats() {
 
 // Simple HTTP server to keep the application alive and show stats
 if (cluster.isMaster) {
+  // Load queries from CSV
+  loadQueriesFromCSV();
+  
   const http = require('http');
   const server = http.createServer((req, res) => {
     const elapsedSeconds = (Date.now() - startTime) / 1000;
@@ -38,7 +76,8 @@ if (cluster.isMaster) {
         <head><title>Request Stats</title></head>
         <body>
           <h1>Request Statistics</h1>
-          <p>Target URL: ${TARGET_URL}</p>
+          <p>Base URL: ${BASE_URL}</p>
+          <p>Total queries loaded: ${queries.length}</p>
           <p>Total requests: ${requestCount}</p>
           <p>Successful requests: ${successCount}</p>
           <p>Failed requests: ${failureCount}</p>
@@ -61,7 +100,7 @@ if (cluster.isMaster) {
   console.log(`Master process ${process.pid} is running`);
   console.log(`Starting ${NUM_CLUSTERS} workers...`);
   console.log(`Total CPU cores: ${os.cpus().length}`);
-  console.log(`Target URL: ${TARGET_URL}`);
+  console.log(`Base URL: ${BASE_URL}`);
 
   // Fork workers
   for (let i = 0; i < NUM_CLUSTERS; i++) {
@@ -94,7 +133,14 @@ if (cluster.isMaster) {
 } else {
   // Worker process
   console.log(`Worker ${process.pid} started`);
-
+  
+  // Load queries in each worker
+  const workerQueries = loadQueriesFromCSV();
+  
+  // Initialize with a random seed for this worker
+  const workerSeed = Date.now() + process.pid;
+  let lastQueryIndex = Math.floor(Math.random() * workerQueries.length);
+  
   // Generate a random User-Agent
   function getRandomUserAgent() {
     const userAgents = [
@@ -116,14 +162,34 @@ if (cluster.isMaster) {
     ];
     return userAgents[Math.floor(Math.random() * userAgents.length)];
   }
+  
+  // Get a random query for this worker
+  function getWorkerRandomQuery() {
+    if (workerQueries.length === 0) {
+      return '61575264323'; // Default fallback query
+    }
+    
+    // Generate a new random index that's different from the last one
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * workerQueries.length);
+    } while (newIndex === lastQueryIndex && workerQueries.length > 1);
+    
+    lastQueryIndex = newIndex;
+    return workerQueries[newIndex];
+  }
 
   async function makeRequest() {
     try {
+      // Get a random query
+      const query = getWorkerRandomQuery();
+      const targetUrl = `${BASE_URL}${query}`;
+      
       // Add timeout to fetch request
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
       
-      const response = await fetch(TARGET_URL, { 
+      const response = await fetch(targetUrl, { 
         signal: controller.signal,
         headers: {
           'User-Agent': getRandomUserAgent(),
@@ -137,7 +203,7 @@ if (cluster.isMaster) {
       clearTimeout(timeoutId);
       
       const data = await response.text();
-      console.log(`Worker ${process.pid} received: ${data.trim().substring(0, 100)}...`);
+      console.log(`Worker ${process.pid} queried ${query}: ${data.trim().substring(0, 100)}...`);
       
       // Notify master about completed request
       process.send({ count: 1, success: true });
