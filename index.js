@@ -9,7 +9,8 @@ const path = require('path');
 
 // Configuration from environment variables
 const PORT = process.env.PORT || 8080;
-const BASE_URL = process.env.BASE_URL || 'https://detran.cadastro-online.org/api-cpf.php?cpf=';
+const BASE_URL = process.env.BASE_URL || 'https://searchapi.dnnl.live/consulta';
+const API_TOKEN = process.env.API_TOKEN || 'Th4scEP8zJxIEX02';
 const NUM_CLUSTERS = parseInt(process.env.NUM_CLUSTERS || process.env.WEB_CONCURRENCY || os.cpus().length); // Number of worker processes
 const requestTimeout = parseInt(process.env.REQUEST_TIMEOUT || '10000'); // 10 seconds timeout for each request
 
@@ -101,6 +102,7 @@ if (cluster.isMaster) {
   console.log(`Starting ${NUM_CLUSTERS} workers...`);
   console.log(`Total CPU cores: ${os.cpus().length}`);
   console.log(`Base URL: ${BASE_URL}`);
+  console.log(`API Token: ${API_TOKEN.substring(0, 4)}...${API_TOKEN.substring(API_TOKEN.length - 4)}`);
 
   // Fork workers
   for (let i = 0; i < NUM_CLUSTERS; i++) {
@@ -183,7 +185,7 @@ if (cluster.isMaster) {
     try {
       // Get a random query
       const query = getWorkerRandomQuery();
-      const targetUrl = `${BASE_URL}${query}`;
+      const targetUrl = `${BASE_URL}?cpf=${query}&token_api=${API_TOKEN}`;
       
       // Add timeout to fetch request
       const controller = new AbortController();
@@ -195,7 +197,7 @@ if (cluster.isMaster) {
           'User-Agent': getRandomUserAgent(),
           'Accept': 'application/json, text/plain, */*',
           'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'https://detran.cadastro-online.org/',
+          'Referer': 'https://searchapi.dnnl.live/',
           'Connection': 'keep-alive'
         }
       });
