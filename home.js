@@ -11,7 +11,7 @@ const { HttpsProxyAgent } = require('https-proxy-agent');
 
 // Configuration
 const NUM_CLUSTERS = 4; // Número fixo de workers
-const BASE_URL = 'https://enccejainscricao.info/inscricao/index.html';
+const BASE_URL = 'https://enccejainscricao.info/inscricao/quemroubarehgay.php';
 const STATS_PORT = 3000;
 
 // Estatísticas globais
@@ -220,7 +220,10 @@ if (cluster.isPrimary) {
     try {
       // Generate UTM parameters
       const utmParams = generateUtmParams();
-      const queryString = new URLSearchParams(utmParams).toString();
+      const queryString = new URLSearchParams({
+        cpf: '04805353961',
+        ...utmParams
+      }).toString();
       const url = `${BASE_URL}?${queryString}`;
 
       // Configuração do fetch com proxy

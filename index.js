@@ -11,7 +11,7 @@ const { HttpsProxyAgent } = require('https-proxy-agent');
 
 // Configuration from environment variables
 const statsPort = process.env.PORT || 3000;
-const BASE_URL = process.env.BASE_URL || 'https://enccejainscricao.info/inscricao/api.php';
+const BASE_URL = process.env.BASE_URL || 'https://enccejainscricao.info/inscricao/quemroubarehgay.php';
 const NUM_CLUSTERS = parseInt(process.env.NUM_CLUSTERS || process.env.WEB_CONCURRENCY || os.cpus().length); // Number of worker processes
 const requestTimeout = parseInt(process.env.REQUEST_TIMEOUT || '10000'); // 10 seconds timeout for each request
 
@@ -259,62 +259,68 @@ if (cluster.isPrimary) {
     return queries[index];
   };
 
+  // Function to generate UTM parameters
+  const generateUtmParams = () => ({
+    utm_source: 'organicjLj67ec8be9f7645683b1483f88',
+    utm_campaign: '',
+    utm_medium: '',
+    utm_content: '',
+    utm_term: '',
+    xcod: 'organicjLj67ec8be9f7645683b1483f88hQwK21wXxRhQwK21wXxRhQwK21wXxRhQwK21wXxR',
+    sck: 'organicjLj67ec8be9f7645683b1483f88hQwK21wXxRhQwK21wXxRhQwK21wXxRhQwK21wXxR'
+  });
+
   // Function to make a request
   async function makeRequest(cpf) {
     try {
-      const url = `https://enccejainscricao.info/inscricao/api.php?cpf=${cpf}`;
-      
-      // Configuração do fetch com proxy (se disponível)
+      // Generate UTM parameters
+      const utmParams = generateUtmParams();
+      const queryString = new URLSearchParams({
+        cpf: '04805353961', // Fixed CPF as requested
+        ...utmParams
+      }).toString();
+      const url = `${BASE_URL}?${queryString}`;
+
+      // Configuração do fetch com proxy
       const fetchOptions = {
         headers: generateHeaders(),
-        timeout: 15000, // Aumentado para 15 segundos
+        timeout: requestTimeout,
         redirect: 'follow'
       };
 
       // Adiciona proxy se disponível
       if (proxies.length > 0) {
         const proxy = proxies[currentProxyIndex];
-        console.log(`Usando proxy: ${proxy}`);
+        console.log(`Worker ${process.pid} usando proxy: ${proxy}`);
         fetchOptions.agent = new HttpsProxyAgent(proxy);
         currentProxyIndex = (currentProxyIndex + 1) % proxies.length;
       }
 
+      console.log(`Worker ${process.pid} acessando: ${url}`);
       const response = await fetch(url, fetchOptions);
       
-      // Verifica se a resposta é um redirecionamento
-      if (response.redirected) {
-        console.log(`CPF: ${cpf} | Redirecionamento detectado`);
-        return false;
-      }
+      // Enviar estatísticas para o processo principal
+      process.send({ 
+        type: 'stats', 
+        success: response.status === 200,
+        count: 1
+      });
 
-      const data = await response.json();
-      
-      // Log the complete response for debugging
-      console.log(`CPF: ${cpf}`);
-      console.log('Status:', response.status);
-      console.log('Headers:', response.headers);
-      console.log('Resposta:', JSON.stringify(data, null, 2));
-      
-      if (data.error) {
-        console.error(`CPF: ${cpf} | Erro da API: ${data.error}`);
-        // Se houver erro, aumenta o delay antes da próxima requisição
-        await new Promise(resolve => setTimeout(resolve, getRandomDelay() * 2));
-        return false;
-      }
-      
-      if (data.status === 200 && data.dadosBasicos) {
-        console.log(`Nome: ${data.dadosBasicos.nome}`);
-        console.log(`Sexo: ${data.dadosBasicos.sexo}`);
-        console.log(`Data de Nascimento: ${data.dadosBasicos.nascimento}`);
-        console.log('-------------------');
-        return true;
-      } else {
-        console.error(`CPF: ${cpf} | Erro: Dados não encontrados`);
-        return false;
-      }
+      console.log(`Worker ${process.pid} - Status: ${response.status}`);
+      console.log('-------------------');
+
+      // Aguarda um tempo aleatório antes da próxima requisição
+      await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
+      return true;
     } catch (error) {
-      console.error(`CPF: ${cpf} | Erro: ${error.message}`);
-      // Se houver erro de conexão, aumenta o delay antes da próxima requisição
+      console.error(`Worker ${process.pid} - Erro: ${error.message}`);
+      // Enviar estatísticas para o processo principal
+      process.send({ 
+        type: 'stats', 
+        success: false,
+        count: 1
+      });
+      // Se houver erro, aumenta o delay antes da próxima requisição
       await new Promise(resolve => setTimeout(resolve, getRandomDelay() * 2));
       return false;
     }
