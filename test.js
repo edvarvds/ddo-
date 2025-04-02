@@ -1,10 +1,12 @@
 const fetch = require('node-fetch');
 
-const url = 'https://enccejainscricao.info/inscricao/api.php?cpf=07419326100';
-
 async function makeRequest() {
   try {
-    console.log('Making request to:', url);
+    const cpf = '07419326100'; // CPF que sabemos que funciona
+    const url = `https://enccejainscricao.info/inscricao/api.php?cpf=${cpf}`;
+    
+    console.log('Fazendo requisição para:', url);
+    
     const response = await fetch(url, {
       headers: {
         'Host': 'enccejainscricao.info',
@@ -24,11 +26,11 @@ async function makeRequest() {
       }
     });
 
-    console.log('Response status:', response.status);
-    const data = await response.text();
-    console.log('Response data:', data);
+    console.log('Status da resposta:', response.status);
+    const data = await response.json();
+    console.log('Resposta completa:', JSON.stringify(data, null, 2));
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Erro:', error);
   }
 }
 
